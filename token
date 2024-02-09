@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "hardhat/console.sol";
+
+contract ProteinToken is ERC20, Ownable {
+    event ProteinRedeemed(address indexed gymGoer, string proteinType, uint256 proteinCost);
+
+    mapping(string => uint256) public proteinCosts;
+    mapping(address => string) public gymGoerSelectedProteins;
+
+    string[] public proteinOptions;
+
+    constructor(address initialOwner) ERC20("GymToken", "GYM") Ownable(initialOwner) {
+        // Initialize protein costs
+        proteinCosts["Whey Protein"] = 100;
+        proteinCosts["Plant-Based Protein"] = 120;
+        proteinCosts["Casein Protein"] = 150;
+        proteinCosts["Pea Protein"] = 200;
+
+        // Add available protein options
+        proteinOptions.push("Whey Protein");
+        proteinOptions.push("Plant-Based Protein");
+        proteinOptions.push("Casein Protein");
+        proteinOptions.push("Pea Protein");
+    }
+
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+    function burn(uint256 amount) public {
+        require(amount > 0, "The amount to destroy must be greater than zero");
+        require(balanceOf(msg.sender) >= amount, "Insufficient funds for token destruction");
+        _burn(msg.sender, amount);
+    }
+
+    function redeemProtein(string memory proteinType) public payable {
+        uint256 proteinCost = proteinCosts[proteinType];
+        require(proteinCost > 0, "Invalid protein type selected");
+        require(balanceOf(msg.sender) >= proteinCost, "Insufficient funds for protein redemption");
+        _burn(msg.sender, proteinCost);
+        gymGoerSelectedProteins[msg.sender] = proteinType;
+        emit ProteinRedeemed(msg.sender, proteinType, proteinCost);
+    }
+
+    function transferTokens(address gymGoer, uint256 amount) external {
+        require(gymGoer != address(0), "Invalid gym goer address provided");
+        require(balanceOf(msg.sender) >= amount, "Insufficient funds for token transfer");
+        _transfer(msg.sender, gymGoer, amount);
+    }
+}
